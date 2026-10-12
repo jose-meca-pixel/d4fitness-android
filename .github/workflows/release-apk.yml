@@ -1,0 +1,30 @@
+name: Publicar APK
+on:
+  workflow_dispatch:
+    inputs:
+      apk_url:
+        description: URL del artefacto APK en expo.dev
+        required: true
+      tag:
+        description: Etiqueta del release (p. ej. v0.1.180-232)
+        required: true
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar APK
+        env:
+          APK_URL: ${{ inputs.apk_url }}
+        run: |
+          case "$APK_URL" in https://expo.dev/artifacts/eas/*.apk) ;; *) echo 'URL no permitida'; exit 1;; esac
+          curl -fL --retry 3 -o d4-fitness.apk "$APK_URL"
+          ls -la d4-fitness.apk
+          sha256sum d4-fitness.apk | tee d4-fitness.apk.sha256
+      - name: Crear release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release create "$TAG" d4-fitness.apk d4-fitness.apk.sha256 --repo "$GITHUB_REPOSITORY" --title "D4 FITNESS $TAG" --notes "APK de Android de D4 FITNESS ($TAG)." --latest
